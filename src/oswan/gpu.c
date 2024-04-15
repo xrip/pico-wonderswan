@@ -1681,7 +1681,7 @@ void ws_gpu_write_byte(uint32_t offset, uint8_t value)
 			wsc_palette[(offset&0x1ff)>>1]=RGB555(((color>>8)&0x0f)<<1,((color>>4)&0x0f)<<1,(color&0x0f)<<1);
 #else
 			wsc_palette[(offset&0x1ff)>>1]=RGB555((color & 0x0f) << 1, ((color >> 4) & 0x0f) << 1, ((color >> 8) & 0x0f) << 1);
-			graphics_set_palette((offset&0x1ff)>>1, RGB888((color & 0x0f) << 1, ((color >> 4) & 0x0f) << 1, ((color >> 8) & 0x0f) << 1));
+			graphics_set_palette((offset&0x1ff)>>1, RGB888((color & 0x0f) * 17, ((color >> 4) & 0x0f) * 17, ((color >> 8) & 0x0f) * 17));
 #endif
 		}
 	}
