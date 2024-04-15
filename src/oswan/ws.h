@@ -25,7 +25,7 @@ int		ws_rotated(void);
 void	ws_set_colour_scheme(int scheme);
 void	ws_set_system(int system);
 void	ws_reset(void);
-int		ws_executeLine(int16 *framebuffer, int renderLine);
+int		ws_executeLine(uint8 *framebuffer, int renderLine);
 void	ws_patchRom(void);
 #if 0
 int		ws_loadState(char *statepath);

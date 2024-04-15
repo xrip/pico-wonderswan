@@ -161,7 +161,7 @@ void ws_reset(void)
 ////////////////////////////////////////////////////////////////////////////////
 //#define DEBUG
 #undef DEBUG
-int ws_executeLine(int16 *framebuffer, int renderLine)
+int ws_executeLine(uint8 *framebuffer, int renderLine)
 {
 	int drawWholeScreen=0;
  

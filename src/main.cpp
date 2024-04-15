@@ -33,7 +33,7 @@ static FATFS fs;
 bool reboot = false;
 semaphore vga_start_semaphore;
 
-alignas(4) uint16_t SCREEN[144][224];
+alignas(4) uint8_t SCREEN[144][224];
 alignas(4) int audio_buffer[AUDIO_BUFFER_LENGTH];
 
 struct input_bits_t {
@@ -52,11 +52,16 @@ static input_bits_t gamepad1_bits = { false, false, false, false, false, false, 
 static input_bits_t gamepad2_bits = { false, false, false, false, false, false, false, false };
 
 static bool swap_ab = false;
+extern	uint8	ws_key_start;
+extern	uint8	ws_key_left;
+extern	uint8	ws_key_right;
+extern	uint8	ws_key_up;
+extern	uint8	ws_key_down;
+extern	uint8	ws_key_button_1;
+extern	uint8	ws_key_button_2;
 
 static void nespad_tick() {
     nespad_read();
-
-    uint8_t controls_state = 0;
 
     if (swap_ab) {
         gamepad1_bits.b = (nespad_state & DPAD_A) != 0;
@@ -73,16 +78,6 @@ static void nespad_tick() {
     gamepad1_bits.down = (nespad_state & DPAD_DOWN) != 0;
     gamepad1_bits.left = (nespad_state & DPAD_LEFT) != 0;
     gamepad1_bits.right = (nespad_state & DPAD_RIGHT) != 0;
-
-
-    if (gamepad1_bits.up) controls_state |= 0x08;
-    if (gamepad1_bits.down) controls_state |= 0x04;
-    if (gamepad1_bits.left) controls_state |= 0x02;
-    if (gamepad1_bits.right) controls_state |= 0x01;
-    if (gamepad1_bits.a) controls_state |= 0x20;
-    if (gamepad1_bits.b) controls_state |= 0x10;
-    if (gamepad1_bits.start) controls_state |= 0x80;
-    if (gamepad1_bits.select) controls_state |= 0x40;
 }
 
 static bool isInReport(hid_keyboard_report_t const* report, const unsigned char keycode) {
@@ -112,6 +107,15 @@ __not_in_flash_func(process_kbd_report)(hid_keyboard_report_t const* report, hid
     keyboard_bits.left = isInReport(report, HID_KEY_ARROW_LEFT) || isInReport(report, HID_KEY_A);
     keyboard_bits.right = isInReport(report, HID_KEY_ARROW_RIGHT)  || isInReport(report, HID_KEY_D);
     //-------------------------------------------------------------------------
+
+    ws_key_start = keyboard_bits.start;
+    ws_key_button_1 = keyboard_bits.a;
+    ws_key_button_2 = keyboard_bits.b;
+
+    ws_key_up = keyboard_bits.up;
+    ws_key_down = keyboard_bits.down;
+    ws_key_left = keyboard_bits.left;
+    ws_key_right = keyboard_bits.right;
 }
 
 Ps2Kbd_Mrmltr ps2kbd(
@@ -688,6 +692,7 @@ void __time_critical_func(render_core)() {
 int frame, frame_cnt = 0;
 int frame_timer_start = 0;
 bool PSRAM_AVAILABLE = true;
+extern uint32_t	ws_shades[16];
 int main() {
     overclock();
 
@@ -717,21 +722,36 @@ int main() {
         filebrowser(HOME_DIR, "ws,wsc");
 
         ws_init((uint8_t *)rom, rom_size);
-        ws_set_system(WS_SYSTEM_MONO);
-//        ws_set_system(WS_SYSTEM_COLOR);
+        if (filename[strlen(filename)-1]=='c'|| filename[strlen(filename)-1]=='C') {
+            ws_set_system(WS_SYSTEM_COLOR);
+        } else {
+            ws_set_system(WS_SYSTEM_MONO);
+        }
+
         ws_set_colour_scheme(0);
         ws_reset();
+        for (int i = 0; i < 16; ++i) {
+            graphics_set_palette(i, ws_shades[i]);
+        }
 
         graphics_set_mode(GRAPHICSMODE_DEFAULT);
 
         frame = 0;
         while (!reboot) {
+            ws_key_start = gamepad1_bits.start;
+            ws_key_button_1 = gamepad1_bits.a;
+            ws_key_button_2 = gamepad1_bits.b;
+
+            ws_key_up = gamepad1_bits.up;
+            ws_key_down = gamepad1_bits.down;
+            ws_key_left = gamepad1_bits.left;
+            ws_key_right = gamepad1_bits.right;
 
             if ((gamepad1_bits.start && gamepad1_bits.select) || (keyboard_bits.start && keyboard_bits.select)) {
                 menu();
             }
 
-            while(!ws_executeLine((int16_t *)SCREEN, 1));
+            while(!ws_executeLine((uint8_t *)SCREEN, 1));
 
             frame++;
             if (1) {

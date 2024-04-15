@@ -21,6 +21,7 @@
 #include "./nec/nec.h"
 #include "io.h"
 #include "gpu.h"
+#include "graphics.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -79,6 +80,7 @@ extern uint8	internalRam[0x10000];
 //
 ////////////////////////////////////////////////////////////////////////////////
 #define RGB555(R,G,B) ((((int)(R))<<10)|(((int)(G))<<5)|((int)(B)))
+#define RGB(r, g, b) (((int)r<<16) | ((int)g << 8 ) | (int)b )
 
 uint8	ws_gpu_operatingInColor;
 uint8	ws_videoMode;
@@ -86,34 +88,34 @@ uint8	ws_gpu_scanline=0;
 int16	ws_palette[16*4];
 int8	ws_paletteColors[8];
 int16	wsc_palette[16*16];
-int16	ws_shades[16];
+uint32	ws_shades[16];
 int		ws_gpu_forceColorSystemBool=0;
 int		ws_gpu_forceMonoSystemBool=0;
 
 
 
 // white
-#define SHADE_COLOR_RED		1.00
-#define SHADE_COLOR_GREEN	1.00
-#define SHADE_COLOR_BLUE	1.00
+#define SHADE_COLOR_RED		8.50
+#define SHADE_COLOR_GREEN	8.50
+#define SHADE_COLOR_BLUE	8.50
 
-int16	ws_colour_scheme_default[16]={	
-						RGB555(SHADE_COLOR_RED*30,SHADE_COLOR_GREEN*30,SHADE_COLOR_BLUE*30),
-						RGB555(SHADE_COLOR_RED*28,SHADE_COLOR_GREEN*28,SHADE_COLOR_BLUE*28),
-						RGB555(SHADE_COLOR_RED*26,SHADE_COLOR_GREEN*26,SHADE_COLOR_BLUE*26),
-						RGB555(SHADE_COLOR_RED*24,SHADE_COLOR_GREEN*24,SHADE_COLOR_BLUE*24),
-						RGB555(SHADE_COLOR_RED*22,SHADE_COLOR_GREEN*22,SHADE_COLOR_BLUE*22),
-						RGB555(SHADE_COLOR_RED*20,SHADE_COLOR_GREEN*20,SHADE_COLOR_BLUE*20),
-						RGB555(SHADE_COLOR_RED*18,SHADE_COLOR_GREEN*18,SHADE_COLOR_BLUE*18),
-						RGB555(SHADE_COLOR_RED*16,SHADE_COLOR_GREEN*16,SHADE_COLOR_BLUE*16),
-						RGB555(SHADE_COLOR_RED*14,SHADE_COLOR_GREEN*14,SHADE_COLOR_BLUE*14),
-						RGB555(SHADE_COLOR_RED*12,SHADE_COLOR_GREEN*12,SHADE_COLOR_BLUE*12),
-						RGB555(SHADE_COLOR_RED*10,SHADE_COLOR_GREEN*10,SHADE_COLOR_BLUE*10),
-						RGB555(SHADE_COLOR_RED*8,SHADE_COLOR_GREEN*8,SHADE_COLOR_BLUE*8),
-						RGB555(SHADE_COLOR_RED*6,SHADE_COLOR_GREEN*6,SHADE_COLOR_BLUE*6),
-						RGB555(SHADE_COLOR_RED*4,SHADE_COLOR_GREEN*4,SHADE_COLOR_BLUE*4),
-						RGB555(SHADE_COLOR_RED*2,SHADE_COLOR_GREEN*2,SHADE_COLOR_BLUE*2),
-						RGB555(SHADE_COLOR_RED*0,SHADE_COLOR_GREEN*0,SHADE_COLOR_BLUE*0)
+uint32	ws_colour_scheme_default[16]={
+        RGB(SHADE_COLOR_RED * 30, SHADE_COLOR_GREEN * 30, SHADE_COLOR_BLUE * 30),
+        RGB(SHADE_COLOR_RED * 28, SHADE_COLOR_GREEN * 28, SHADE_COLOR_BLUE * 28),
+        RGB(SHADE_COLOR_RED * 26, SHADE_COLOR_GREEN * 26, SHADE_COLOR_BLUE * 26),
+        RGB(SHADE_COLOR_RED * 24, SHADE_COLOR_GREEN * 24, SHADE_COLOR_BLUE * 24),
+        RGB(SHADE_COLOR_RED * 22, SHADE_COLOR_GREEN * 22, SHADE_COLOR_BLUE * 22),
+        RGB(SHADE_COLOR_RED * 20, SHADE_COLOR_GREEN * 20, SHADE_COLOR_BLUE * 20),
+        RGB(SHADE_COLOR_RED * 18, SHADE_COLOR_GREEN * 18, SHADE_COLOR_BLUE * 18),
+        RGB(SHADE_COLOR_RED * 16, SHADE_COLOR_GREEN * 16, SHADE_COLOR_BLUE * 16),
+        RGB(SHADE_COLOR_RED * 14, SHADE_COLOR_GREEN * 14, SHADE_COLOR_BLUE * 14),
+        RGB(SHADE_COLOR_RED * 12, SHADE_COLOR_GREEN * 12, SHADE_COLOR_BLUE * 12),
+        RGB(SHADE_COLOR_RED * 10, SHADE_COLOR_GREEN * 10, SHADE_COLOR_BLUE * 10),
+        RGB(SHADE_COLOR_RED * 8, SHADE_COLOR_GREEN * 8, SHADE_COLOR_BLUE * 8),
+        RGB(SHADE_COLOR_RED * 6, SHADE_COLOR_GREEN * 6, SHADE_COLOR_BLUE * 6),
+        RGB(SHADE_COLOR_RED * 4, SHADE_COLOR_GREEN * 4, SHADE_COLOR_BLUE * 4),
+        RGB(SHADE_COLOR_RED * 2, SHADE_COLOR_GREEN * 2, SHADE_COLOR_BLUE * 2),
+        RGB(SHADE_COLOR_RED * 0, SHADE_COLOR_GREEN * 0, SHADE_COLOR_BLUE * 0)
 					};
 // green
 #undef  SHADE_COLOR_RED
@@ -123,23 +125,23 @@ int16	ws_colour_scheme_default[16]={
 #define SHADE_COLOR_GREEN	0.90
 #define SHADE_COLOR_BLUE	0.20
 
-int16	ws_colour_scheme_green[16]={	
-						RGB555(SHADE_COLOR_RED*30,SHADE_COLOR_GREEN*30,SHADE_COLOR_BLUE*30),
-						RGB555(SHADE_COLOR_RED*28,SHADE_COLOR_GREEN*28,SHADE_COLOR_BLUE*28),
-						RGB555(SHADE_COLOR_RED*26,SHADE_COLOR_GREEN*26,SHADE_COLOR_BLUE*26),
-						RGB555(SHADE_COLOR_RED*24,SHADE_COLOR_GREEN*24,SHADE_COLOR_BLUE*24),
-						RGB555(SHADE_COLOR_RED*22,SHADE_COLOR_GREEN*22,SHADE_COLOR_BLUE*22),
-						RGB555(SHADE_COLOR_RED*20,SHADE_COLOR_GREEN*20,SHADE_COLOR_BLUE*20),
-						RGB555(SHADE_COLOR_RED*18,SHADE_COLOR_GREEN*18,SHADE_COLOR_BLUE*18),
-						RGB555(SHADE_COLOR_RED*16,SHADE_COLOR_GREEN*16,SHADE_COLOR_BLUE*16),
-						RGB555(SHADE_COLOR_RED*14,SHADE_COLOR_GREEN*14,SHADE_COLOR_BLUE*14),
-						RGB555(SHADE_COLOR_RED*12,SHADE_COLOR_GREEN*12,SHADE_COLOR_BLUE*12),
-						RGB555(SHADE_COLOR_RED*10,SHADE_COLOR_GREEN*10,SHADE_COLOR_BLUE*10),
-						RGB555(SHADE_COLOR_RED*8,SHADE_COLOR_GREEN*8,SHADE_COLOR_BLUE*8),
-						RGB555(SHADE_COLOR_RED*6,SHADE_COLOR_GREEN*6,SHADE_COLOR_BLUE*6),
-						RGB555(SHADE_COLOR_RED*4,SHADE_COLOR_GREEN*4,SHADE_COLOR_BLUE*4),
-						RGB555(SHADE_COLOR_RED*2,SHADE_COLOR_GREEN*2,SHADE_COLOR_BLUE*2),
-						RGB555(SHADE_COLOR_RED*0,SHADE_COLOR_GREEN*0,SHADE_COLOR_BLUE*0)
+uint32	ws_colour_scheme_green[16]={
+        RGB(SHADE_COLOR_RED * 30, SHADE_COLOR_GREEN * 30, SHADE_COLOR_BLUE * 30),
+        RGB(SHADE_COLOR_RED * 28, SHADE_COLOR_GREEN * 28, SHADE_COLOR_BLUE * 28),
+        RGB(SHADE_COLOR_RED * 26, SHADE_COLOR_GREEN * 26, SHADE_COLOR_BLUE * 26),
+        RGB(SHADE_COLOR_RED * 24, SHADE_COLOR_GREEN * 24, SHADE_COLOR_BLUE * 24),
+        RGB(SHADE_COLOR_RED * 22, SHADE_COLOR_GREEN * 22, SHADE_COLOR_BLUE * 22),
+        RGB(SHADE_COLOR_RED * 20, SHADE_COLOR_GREEN * 20, SHADE_COLOR_BLUE * 20),
+        RGB(SHADE_COLOR_RED * 18, SHADE_COLOR_GREEN * 18, SHADE_COLOR_BLUE * 18),
+        RGB(SHADE_COLOR_RED * 16, SHADE_COLOR_GREEN * 16, SHADE_COLOR_BLUE * 16),
+        RGB(SHADE_COLOR_RED * 14, SHADE_COLOR_GREEN * 14, SHADE_COLOR_BLUE * 14),
+        RGB(SHADE_COLOR_RED * 12, SHADE_COLOR_GREEN * 12, SHADE_COLOR_BLUE * 12),
+        RGB(SHADE_COLOR_RED * 10, SHADE_COLOR_GREEN * 10, SHADE_COLOR_BLUE * 10),
+        RGB(SHADE_COLOR_RED * 8, SHADE_COLOR_GREEN * 8, SHADE_COLOR_BLUE * 8),
+        RGB(SHADE_COLOR_RED * 6, SHADE_COLOR_GREEN * 6, SHADE_COLOR_BLUE * 6),
+        RGB(SHADE_COLOR_RED * 4, SHADE_COLOR_GREEN * 4, SHADE_COLOR_BLUE * 4),
+        RGB(SHADE_COLOR_RED * 2, SHADE_COLOR_GREEN * 2, SHADE_COLOR_BLUE * 2),
+        RGB(SHADE_COLOR_RED * 0, SHADE_COLOR_GREEN * 0, SHADE_COLOR_BLUE * 0)
 					};
 // amber
 #undef  SHADE_COLOR_RED
@@ -149,23 +151,23 @@ int16	ws_colour_scheme_green[16]={
 #define SHADE_COLOR_GREEN	0.61
 #define SHADE_COLOR_BLUE	0.00
 
-int16	ws_colour_scheme_amber[16]={	
-						RGB555(SHADE_COLOR_RED*30,SHADE_COLOR_GREEN*30,SHADE_COLOR_BLUE*30),
-						RGB555(SHADE_COLOR_RED*28,SHADE_COLOR_GREEN*28,SHADE_COLOR_BLUE*28),
-						RGB555(SHADE_COLOR_RED*26,SHADE_COLOR_GREEN*26,SHADE_COLOR_BLUE*26),
-						RGB555(SHADE_COLOR_RED*24,SHADE_COLOR_GREEN*24,SHADE_COLOR_BLUE*24),
-						RGB555(SHADE_COLOR_RED*22,SHADE_COLOR_GREEN*22,SHADE_COLOR_BLUE*22),
-						RGB555(SHADE_COLOR_RED*20,SHADE_COLOR_GREEN*20,SHADE_COLOR_BLUE*20),
-						RGB555(SHADE_COLOR_RED*18,SHADE_COLOR_GREEN*18,SHADE_COLOR_BLUE*18),
-						RGB555(SHADE_COLOR_RED*16,SHADE_COLOR_GREEN*16,SHADE_COLOR_BLUE*16),
-						RGB555(SHADE_COLOR_RED*14,SHADE_COLOR_GREEN*14,SHADE_COLOR_BLUE*14),
-						RGB555(SHADE_COLOR_RED*12,SHADE_COLOR_GREEN*12,SHADE_COLOR_BLUE*12),
-						RGB555(SHADE_COLOR_RED*10,SHADE_COLOR_GREEN*10,SHADE_COLOR_BLUE*10),
-						RGB555(SHADE_COLOR_RED*8,SHADE_COLOR_GREEN*8,SHADE_COLOR_BLUE*8),
-						RGB555(SHADE_COLOR_RED*6,SHADE_COLOR_GREEN*6,SHADE_COLOR_BLUE*6),
-						RGB555(SHADE_COLOR_RED*4,SHADE_COLOR_GREEN*4,SHADE_COLOR_BLUE*4),
-						RGB555(SHADE_COLOR_RED*2,SHADE_COLOR_GREEN*2,SHADE_COLOR_BLUE*2),
-						RGB555(SHADE_COLOR_RED*0,SHADE_COLOR_GREEN*0,SHADE_COLOR_BLUE*0)
+uint32	ws_colour_scheme_amber[16]={
+        RGB(SHADE_COLOR_RED * 30, SHADE_COLOR_GREEN * 30, SHADE_COLOR_BLUE * 30),
+        RGB(SHADE_COLOR_RED * 28, SHADE_COLOR_GREEN * 28, SHADE_COLOR_BLUE * 28),
+        RGB(SHADE_COLOR_RED * 26, SHADE_COLOR_GREEN * 26, SHADE_COLOR_BLUE * 26),
+        RGB(SHADE_COLOR_RED * 24, SHADE_COLOR_GREEN * 24, SHADE_COLOR_BLUE * 24),
+        RGB(SHADE_COLOR_RED * 22, SHADE_COLOR_GREEN * 22, SHADE_COLOR_BLUE * 22),
+        RGB(SHADE_COLOR_RED * 20, SHADE_COLOR_GREEN * 20, SHADE_COLOR_BLUE * 20),
+        RGB(SHADE_COLOR_RED * 18, SHADE_COLOR_GREEN * 18, SHADE_COLOR_BLUE * 18),
+        RGB(SHADE_COLOR_RED * 16, SHADE_COLOR_GREEN * 16, SHADE_COLOR_BLUE * 16),
+        RGB(SHADE_COLOR_RED * 14, SHADE_COLOR_GREEN * 14, SHADE_COLOR_BLUE * 14),
+        RGB(SHADE_COLOR_RED * 12, SHADE_COLOR_GREEN * 12, SHADE_COLOR_BLUE * 12),
+        RGB(SHADE_COLOR_RED * 10, SHADE_COLOR_GREEN * 10, SHADE_COLOR_BLUE * 10),
+        RGB(SHADE_COLOR_RED * 8, SHADE_COLOR_GREEN * 8, SHADE_COLOR_BLUE * 8),
+        RGB(SHADE_COLOR_RED * 6, SHADE_COLOR_GREEN * 6, SHADE_COLOR_BLUE * 6),
+        RGB(SHADE_COLOR_RED * 4, SHADE_COLOR_GREEN * 4, SHADE_COLOR_BLUE * 4),
+        RGB(SHADE_COLOR_RED * 2, SHADE_COLOR_GREEN * 2, SHADE_COLOR_BLUE * 2),
+        RGB(SHADE_COLOR_RED * 0, SHADE_COLOR_GREEN * 0, SHADE_COLOR_BLUE * 0)
 					};
 #if 0
 uint8	*ws_tile_cache;
@@ -177,13 +179,13 @@ uint8	*wsc_hflipped_tile_cache;
 uint8	*ws_modified_tile;
 uint8	*wsc_modified_tile;
 #else
-uint8 * ws_tile_cache;
-uint8 wsc_tile_cache[1024*8*8] = { 0 };
-uint8 * ws_hflipped_tile_cache = wsc_tile_cache;
-//uint8 wsc_hflipped_tile_cache[1024*8*8];
-uint8 * wsc_hflipped_tile_cache = wsc_tile_cache;
-uint8 * ws_modified_tile = wsc_tile_cache;
+uint8 wsc_tile_cache[1024*8*8];
+uint8 * ws_tile_cache = wsc_tile_cache;
+uint8 wsc_hflipped_tile_cache[1024*8*8];
+uint8 * ws_hflipped_tile_cache = wsc_hflipped_tile_cache;
 uint8 wsc_modified_tile[1024];
+uint8 * ws_modified_tile = wsc_modified_tile;
+
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -201,9 +203,9 @@ void ws_gpu_set_colour_scheme(int scheme)
 {
 	switch (scheme)
 	{
-	case COLOUR_SCHEME_DEFAULT: memcpy(ws_shades,ws_colour_scheme_default,16*sizeof(int16)); break;
-	case COLOUR_SCHEME_AMBER  : memcpy(ws_shades,ws_colour_scheme_amber,16*sizeof(int16)); break;
-	case COLOUR_SCHEME_GREEN  : memcpy(ws_shades,ws_colour_scheme_green,16*sizeof(int16)); break;
+	case COLOUR_SCHEME_DEFAULT: memcpy(ws_shades,ws_colour_scheme_default,16*sizeof(uint32)); break;
+	case COLOUR_SCHEME_AMBER  : memcpy(ws_shades,ws_colour_scheme_amber,16*sizeof(uint32)); break;
+	case COLOUR_SCHEME_GREEN  : memcpy(ws_shades,ws_colour_scheme_green,16*sizeof(uint32)); break;
 	}
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -267,9 +269,9 @@ void ws_gpu_init(void)
 	memset(wsc_tile_cache,0x00,1024*8*8);
     ws_tile_cache = wsc_tile_cache;
 
-//	memset(wsc_hflipped_tile_cache,0x00,1024*8*8);
-    ws_hflipped_tile_cache = wsc_tile_cache;
-    wsc_hflipped_tile_cache = wsc_tile_cache;
+	memset(wsc_hflipped_tile_cache,0x00,1024*8*8);
+//    ws_hflipped_tile_cache = wsc_tile_cache;
+    //wsc_hflipped_tile_cache = wsc_tile_cache;
 
 
 	memset(wsc_modified_tile,0x01,1024);
@@ -640,7 +642,7 @@ uint8 *ws_tileCache_getTileRow(uint32 tileIndex, uint32 line,
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-void ws_drawClippedSpriteLine(int16 *framebuffer, uint16 scanline,
+void ws_drawClippedSpriteLine(uint8 *framebuffer, uint16 scanline,
 							  uint32 x, uint32 y, uint32 tileIndex, uint32 paletteIndex,
 							  uint32 vFlip, uint32 hFlip,
 							  uint32 clip_x0, uint32 clip_y0, uint32 clip_x1, uint32 clip_y1)
@@ -682,7 +684,7 @@ void ws_drawClippedSpriteLine(int16 *framebuffer, uint16 scanline,
 		{
 			while (nbPixels)
 			{
-				if (*ws_tileRow) *framebuffer=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; 
+				if (*ws_tileRow) *framebuffer=ws_paletteColors[ws_paletteAlias[*ws_tileRow]];
 				framebuffer++;	ws_tileRow++;
 				nbPixels--;
 			}
@@ -691,7 +693,7 @@ void ws_drawClippedSpriteLine(int16 *framebuffer, uint16 scanline,
 		{
 			while (nbPixels)
 			{
-				*framebuffer=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; 
+				*framebuffer=ws_paletteColors[ws_paletteAlias[*ws_tileRow]];
 				framebuffer++;	ws_tileRow++;
 				nbPixels--;
 			}
@@ -709,7 +711,7 @@ void ws_drawClippedSpriteLine(int16 *framebuffer, uint16 scanline,
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-void ws_gpu_renderScanline(int16 *framebuffer)
+void ws_gpu_renderScanline(uint8 *framebuffer)
 {
 
 	if (ws_gpu_scanline>143)	
@@ -720,11 +722,11 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 	framebuffer+=(224*ws_gpu_scanline);
 
 	// fill with background color
-	int16 backgroundColor;
+	uint8 backgroundColor;
 	if (ws_gpu_operatingInColor)
 		backgroundColor=wsc_palette[ws_ioRam[0x01]];
 	else
-		backgroundColor=ws_shades[ws_paletteColors[ws_palette[((ws_ioRam[0x01]&0xf0)>>2)+(ws_ioRam[0x01]&0x03)]]];
+		backgroundColor=ws_paletteColors[ws_palette[((ws_ioRam[0x01]&0xf0)>>2)+(ws_ioRam[0x01]&0x03)]];
 
 #ifdef __cplusplus
 	for (int i=0;i<224;i++)
@@ -753,7 +755,7 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 		int	lineInTile   = ws_bgScroll_y&0x07;
 		int columnInTile = ws_bgScroll_x&0x07;
 	
-		int16 *scanlinePtr=framebuffer;
+		uint8 *scanlinePtr=framebuffer;
 
 		if (ws_gpu_operatingInColor)
 		{
@@ -830,7 +832,7 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 				}
 			}
 		}
-		else
+		else // monochrome
 		{
 			// render the first clipped tile
 			if (columnInTile)
@@ -853,7 +855,7 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 #endif
 					{
 						if (*ws_tileRow)	
-							*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; 
+							*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]];
 						scanlinePtr++; 
 						ws_tileRow++;
 					}
@@ -867,7 +869,7 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 					for (i=columnInTile;i<8;i++)
 #endif
 					{
-						*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; 
+						*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]];
 						scanlinePtr++; 
 						ws_tileRow++;
 					}
@@ -892,25 +894,25 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 				
 				if ((tileInfo>>9)&0x04)
 				{
-					if (*ws_tileRow)	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-					if (*ws_tileRow)	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-					if (*ws_tileRow)	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-					if (*ws_tileRow)	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-					if (*ws_tileRow)	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-					if (*ws_tileRow)	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-					if (*ws_tileRow)	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-					if (*ws_tileRow)	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
+					if (*ws_tileRow)	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+					if (*ws_tileRow)	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+					if (*ws_tileRow)	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+					if (*ws_tileRow)	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+					if (*ws_tileRow)	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+					if (*ws_tileRow)	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+					if (*ws_tileRow)	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+					if (*ws_tileRow)	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
 				}
 				else
 				{
-					*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-					*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-					*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-					*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-					*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-					*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-					*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-					*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
+					*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+					*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+					*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+					*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+					*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+					*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+					*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+					*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
 				}
 
 			}
@@ -935,7 +937,7 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 #endif
 					{
 						if (*ws_tileRow)	
-							*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; 
+							*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]];
 						scanlinePtr++; 
 						ws_tileRow++;
 					}
@@ -949,7 +951,7 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 					for (i=0;i<columnInTile;i++)
 #endif
 					{
-						*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; 
+						*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]];
 						scanlinePtr++; 
 						ws_tileRow++;
 					}
@@ -1025,7 +1027,7 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 		int	lineInTile   = ws_fgScroll_y&0x07;
 		int columnInTile = ws_fgScroll_x&0x07;
 	
-		int16	*scanlinePtr=framebuffer;
+		uint8	*scanlinePtr=framebuffer;
 		
 
 		// window disabled
@@ -1133,7 +1135,7 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 #endif
 						{
 							if (*ws_tileRow)	
-								*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; 
+								*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]];
 							scanlinePtr++; 
 							ws_tileRow++;
 						}
@@ -1147,7 +1149,7 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 						for (i=columnInTile;i<8;i++)
 #endif
 						{
-							*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; 
+							*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]];
 							scanlinePtr++; 
 							ws_tileRow++;
 						}
@@ -1172,25 +1174,25 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 					
 					if ((tileInfo>>9)&0x04)
 					{
-						if (*ws_tileRow)	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-						if (*ws_tileRow)	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-						if (*ws_tileRow)	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-						if (*ws_tileRow)	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-						if (*ws_tileRow)	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-						if (*ws_tileRow)	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-						if (*ws_tileRow)	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-						if (*ws_tileRow)	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
+						if (*ws_tileRow)	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+						if (*ws_tileRow)	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+						if (*ws_tileRow)	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+						if (*ws_tileRow)	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+						if (*ws_tileRow)	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+						if (*ws_tileRow)	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+						if (*ws_tileRow)	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+						if (*ws_tileRow)	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
 					}
 					else
 					{
-						*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-						*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-						*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-						*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-						*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-						*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-						*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
-						*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++;
+						*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+						*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+						*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+						*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+						*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+						*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+						*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
+						*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++;
 					}
 				}
 
@@ -1214,7 +1216,7 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 #endif
 						{
 							if (*ws_tileRow)	
-								*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; 
+								*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]];
 							scanlinePtr++; 
 							ws_tileRow++;
 						}
@@ -1228,7 +1230,7 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 						for (i=0;i<columnInTile;i++)
 #endif
 						{
-							*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; 
+							*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]];
 							scanlinePtr++; 
 							ws_tileRow++;
 						}
@@ -1345,7 +1347,7 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 #endif
 					{
 						if ((*ws_tileRow)&&(column>=ws_fgWindow_x0)&&(column<=ws_fgWindow_x1))	
-							*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; 
+							*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]];
 						column++;
 						scanlinePtr++; 
 						ws_tileRow++;
@@ -1369,14 +1371,14 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 					int16	*ws_paletteAlias=&ws_palette[((tileInfo>>9)&0x0f)<<2];
 					
 
-					if ((*ws_tileRow)&&(column>=ws_fgWindow_x0)&&(column<=ws_fgWindow_x1))	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++; column++;
-					if ((*ws_tileRow)&&(column>=ws_fgWindow_x0)&&(column<=ws_fgWindow_x1))	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++; column++;
-					if ((*ws_tileRow)&&(column>=ws_fgWindow_x0)&&(column<=ws_fgWindow_x1))	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++; column++;
-					if ((*ws_tileRow)&&(column>=ws_fgWindow_x0)&&(column<=ws_fgWindow_x1))	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++; column++;
-					if ((*ws_tileRow)&&(column>=ws_fgWindow_x0)&&(column<=ws_fgWindow_x1))	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++; column++;
-					if ((*ws_tileRow)&&(column>=ws_fgWindow_x0)&&(column<=ws_fgWindow_x1))	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++; column++;
-					if ((*ws_tileRow)&&(column>=ws_fgWindow_x0)&&(column<=ws_fgWindow_x1))	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++; column++;
-					if ((*ws_tileRow)&&(column>=ws_fgWindow_x0)&&(column<=ws_fgWindow_x1))	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++; column++;
+					if ((*ws_tileRow)&&(column>=ws_fgWindow_x0)&&(column<=ws_fgWindow_x1))	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++; column++;
+					if ((*ws_tileRow)&&(column>=ws_fgWindow_x0)&&(column<=ws_fgWindow_x1))	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++; column++;
+					if ((*ws_tileRow)&&(column>=ws_fgWindow_x0)&&(column<=ws_fgWindow_x1))	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++; column++;
+					if ((*ws_tileRow)&&(column>=ws_fgWindow_x0)&&(column<=ws_fgWindow_x1))	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++; column++;
+					if ((*ws_tileRow)&&(column>=ws_fgWindow_x0)&&(column<=ws_fgWindow_x1))	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++; column++;
+					if ((*ws_tileRow)&&(column>=ws_fgWindow_x0)&&(column<=ws_fgWindow_x1))	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++; column++;
+					if ((*ws_tileRow)&&(column>=ws_fgWindow_x0)&&(column<=ws_fgWindow_x1))	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++; column++;
+					if ((*ws_tileRow)&&(column>=ws_fgWindow_x0)&&(column<=ws_fgWindow_x1))	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++; column++;
 				}
 
 				// render the last clipped tile
@@ -1397,7 +1399,7 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 #endif
 					{
 						if ((*ws_tileRow)&&(column>=ws_fgWindow_x0)&&(column<=ws_fgWindow_x1))	
-							*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; 
+							*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]];
 						column++;
 						scanlinePtr++; 
 						ws_tileRow++;
@@ -1514,7 +1516,7 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 #endif
 					{
 						if ((*ws_tileRow)&&((column<ws_fgWindow_x0)||(column>ws_fgWindow_x1)))	
-							*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; 
+							*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]];
 						column++;
 						scanlinePtr++; 
 						ws_tileRow++;
@@ -1536,14 +1538,14 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 					uint8	*ws_tileRow=ws_tileCache_getTileRow(	tileInfo&0x1ff, lineInTile, tileInfo&0x8000, tileInfo&0x4000, tileInfo&0x2000);
 					int16	*ws_paletteAlias=&ws_palette[((tileInfo>>9)&0x0f)<<2];
 					
-					if ((*ws_tileRow)&&((column<ws_fgWindow_x0)||(column>ws_fgWindow_x1)))	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++; column++;
-					if ((*ws_tileRow)&&((column<ws_fgWindow_x0)||(column>ws_fgWindow_x1)))	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++; column++;
-					if ((*ws_tileRow)&&((column<ws_fgWindow_x0)||(column>ws_fgWindow_x1)))	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++; column++;
-					if ((*ws_tileRow)&&((column<ws_fgWindow_x0)||(column>ws_fgWindow_x1)))	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++; column++;
-					if ((*ws_tileRow)&&((column<ws_fgWindow_x0)||(column>ws_fgWindow_x1)))	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++; column++;
-					if ((*ws_tileRow)&&((column<ws_fgWindow_x0)||(column>ws_fgWindow_x1)))	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++; column++;
-					if ((*ws_tileRow)&&((column<ws_fgWindow_x0)||(column>ws_fgWindow_x1)))	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++; column++;
-					if ((*ws_tileRow)&&((column<ws_fgWindow_x0)||(column>ws_fgWindow_x1)))	*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; scanlinePtr++; ws_tileRow++; column++;
+					if ((*ws_tileRow)&&((column<ws_fgWindow_x0)||(column>ws_fgWindow_x1)))	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++; column++;
+					if ((*ws_tileRow)&&((column<ws_fgWindow_x0)||(column>ws_fgWindow_x1)))	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++; column++;
+					if ((*ws_tileRow)&&((column<ws_fgWindow_x0)||(column>ws_fgWindow_x1)))	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++; column++;
+					if ((*ws_tileRow)&&((column<ws_fgWindow_x0)||(column>ws_fgWindow_x1)))	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++; column++;
+					if ((*ws_tileRow)&&((column<ws_fgWindow_x0)||(column>ws_fgWindow_x1)))	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++; column++;
+					if ((*ws_tileRow)&&((column<ws_fgWindow_x0)||(column>ws_fgWindow_x1)))	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++; column++;
+					if ((*ws_tileRow)&&((column<ws_fgWindow_x0)||(column>ws_fgWindow_x1)))	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++; column++;
+					if ((*ws_tileRow)&&((column<ws_fgWindow_x0)||(column>ws_fgWindow_x1)))	*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]]; scanlinePtr++; ws_tileRow++; column++;
 				}
 
 				// render the last clipped tile
@@ -1564,7 +1566,7 @@ void ws_gpu_renderScanline(int16 *framebuffer)
 #endif
 					{
 						if ((*ws_tileRow)&&((column<ws_fgWindow_x0)||(column>ws_fgWindow_x1)))	
-							*scanlinePtr=ws_shades[ws_paletteColors[ws_paletteAlias[*ws_tileRow]]]; 
+							*scanlinePtr=ws_paletteColors[ws_paletteAlias[*ws_tileRow]];
 						column++;
 						scanlinePtr++; 
 						ws_tileRow++;
@@ -1678,7 +1680,8 @@ void ws_gpu_write_byte(uint32_t offset, uint8_t value)
 #if 0
 			wsc_palette[(offset&0x1ff)>>1]=RGB555(((color>>8)&0x0f)<<1,((color>>4)&0x0f)<<1,(color&0x0f)<<1);
 #else
-			wsc_palette[(offset&0x1ff)>>1]=RGB555((color&0x0f)<<1,((color>>4)&0x0f)<<1,((color>>8)&0x0f)<<1);
+			wsc_palette[(offset&0x1ff)>>1]=RGB555((color & 0x0f) << 1, ((color >> 4) & 0x0f) << 1, ((color >> 8) & 0x0f) << 1);
+			graphics_set_palette((offset&0x1ff)>>1, RGB888((color & 0x0f) << 1, ((color >> 4) & 0x0f) << 1, ((color >> 8) & 0x0f) << 1));
 #endif
 		}
 	}
