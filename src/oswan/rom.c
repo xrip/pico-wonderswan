@@ -9,21 +9,10 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
-#include <io.h>
-#if 0
-#include <fcntl.h>
-#else
-#endif
 #include "types.h"
 #include "rom.h"
 
-#if 1
-uint8_t * wsmem; /*Static Array (16 megabytes)*/
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 //
 ////////////////////////////////////////////////////////////////////////////////
@@ -37,6 +26,7 @@ uint8_t * wsmem; /*Static Array (16 megabytes)*/
 ////////////////////////////////////////////////////////////////////////////////
 uint8	*ws_rom_load(uint8 *rom, uint32 *romSize)
 {
+    uint8_t * wsmem; /*Static Array (16 megabytes)*/
 #if 0
 	uint8	*rom=NULL;
 	__int64 filepos;
@@ -110,9 +100,10 @@ void	ws_rom_dumpInfo(uint8 *wsrom, uint32 romSize)
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-static ws_romHeaderStruct wsromHeader;
+
 ws_romHeaderStruct		*ws_rom_getHeader(uint8 *wsrom, uint32 wsromSize)
 {
+    static ws_romHeaderStruct wsromHeader;
     memcpy(&wsromHeader,wsrom+(wsromSize-10),10);
     return &wsromHeader;
 

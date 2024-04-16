@@ -11,13 +11,8 @@
 
 #include <string.h>
 #include <io.h>
-#if 0
-#include <conio.h>
-#endif
-#include <time.h>
 #include "rom.h"
 #include "./nec/nec.h"
-#include "io.h"
 #include "gpu.h"
 #include "psram_spi.h"
 
@@ -32,32 +27,20 @@
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-#define IO_ROM_BANK_BASE_SELECTOR	0xC0
+#define IO_ROM_BANK_BASE_SELECTOR    0xC0
 
 
-#if 0
-uint8	*ws_rom;
-uint8	*ws_staticRam;
-uint8	*internalRam;
-uint8	*externalEeprom;
-#else
-static	uint8	*ws_rom;
+static uint8 *ws_rom;
+uint8 internalRam[0x10000];
 
-uint8	internalRam[0x10000];
-//uint8	ws_staticRam[0x10000];
-//uint8	externalEeprom[131072];
-#endif
 
-uint16	ws_rom_checksum;
+uint16 ws_rom_checksum;
 
-uint32	sramAddressMask;
-uint32	externalEepromAddressMask;
-uint32	romAddressMask;
-#if 0
-uint32  romSize;
-#else
+uint32 sramAddressMask;
+uint32 externalEepromAddressMask;
+uint32 romAddressMask;
 static uint32 romSize;
-#endif
+
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -71,101 +54,86 @@ static uint32 romSize;
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-void cpu_writemem20(uint32_t addr,uint8_t value)
-{
-	uint32	offset=addr&0xffff;
-	uint32	bank=addr>>16;
+void cpu_writemem20(uint32_t addr, uint8_t value) {
+    uint32 offset = addr & 0xffff;
+    uint32 bank = addr >> 16;
 
-	// 0 - RAM - 16 KB (WS) / 64 KB (WSC) internal RAM
-	if (!bank)
-	{
-		ws_gpu_write_byte(offset,value);
+    // 0 - RAM - 16 KB (WS) / 64 KB (WSC) internal RAM
+    if (!bank) {
+        ws_gpu_write_byte(offset, value);
 //		ws_audio_write_byte(offset,value);
-	}
-	else
-	// 1 - SRAM (cart) 
-	if (bank==1)
-        write8psram((1024 << 10) + (offset&sramAddressMask), value);
+    } else
+        // 1 - SRAM (cart)
+    if (bank == 1)
+        write8psram((1024 << 10) + (offset & sramAddressMask), value);
 //		ws_staticRam[offset&sramAddressMask]=value;
 
-	// other banks are read-only
+    // other banks are read-only
 }
-////////////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-//
-//
-//
-//
-//
-////////////////////////////////////////////////////////////////////////////////
-uint8_t cpu_readmem20(uint32_t addr)
-{
-	uint32	offset=addr&0xffff;
-	uint32	bank=addr>>16;
-#ifndef __cplusplus
-	int romBank;
-#endif
-	
-	switch (bank)
-	{
-	case 0:		// 0 - RAM - 16 KB (WS) / 64 KB (WSC) internal RAM
-				if (ws_gpu_operatingInColor)
-					return(internalRam[offset]);
-				else
-				if (offset<0x4000)
-					return(internalRam[offset]);
-				return(0xff);
 
-	case 1:  	// 1 - SRAM (cart)
-                return read8psram((1024 << 10) + (offset&sramAddressMask));
+////////////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+//
+//
+//
+//
+//
+////////////////////////////////////////////////////////////////////////////////
+uint8_t cpu_readmem20(uint32_t addr) {
+    uint32 offset = addr & 0xffff;
+    uint32 bank = addr >> 16;
+
+    switch (bank) {
+        case 0:        // 0 - RAM - 16 KB (WS) / 64 KB (WSC) internal RAM
+            if (ws_gpu_operatingInColor || offset < 0x4000)
+                return (internalRam[offset]);
+            return (0xff);
+
+        case 1:    // 1 - SRAM (cart)
+            return read8psram((1024 << 10) + (offset & sramAddressMask));
 //				return ws_staticRam[offset&sramAddressMask];
-	case 2:
-	case 3:		return ws_rom[offset+((ws_ioRam[IO_ROM_BANK_BASE_SELECTOR+bank]&((romSize>>16)-1))<<16)];
-	default: 
-#ifdef __cplusplus
-				int romBank=(256-(((ws_ioRam[IO_ROM_BANK_BASE_SELECTOR]&0xf)<<4)|(bank&0xf)));
-#else
-				romBank=(256-(((ws_ioRam[IO_ROM_BANK_BASE_SELECTOR]&0xf)<<4)|(bank&0xf)));
-#endif
-				return ws_rom[(unsigned)(offset+romSize-(romBank<<16))];
-	}
-	return(0xff);
+        case 2:
+        case 3:
+            return ws_rom[offset + ((ws_ioRam[IO_ROM_BANK_BASE_SELECTOR + bank] & ((romSize >> 16) - 1)) << 16)];
+        default: {
+            unsigned int romBank = (256 - (((ws_ioRam[IO_ROM_BANK_BASE_SELECTOR] & 0xf) << 4) | (bank & 0xf)));
+            return ws_rom[(unsigned) (offset + romSize - (romBank << 16))];
+        }
+    }
+    return (0xff);
 }
-////////////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-//
-//
-//
-//
-//
-////////////////////////////////////////////////////////////////////////////////
-void ws_memory_init(uint8 *rom, uint32 wsRomSize)
-{
-	ws_romHeaderStruct	*ws_romHeader;
-	
-	ws_rom=rom;
-	romSize=wsRomSize;
-	ws_romHeader=ws_rom_getHeader(ws_rom,romSize);
-	ws_rom_checksum=ws_romHeader->checksum;
-#if 0
-	internalRam=(uint8*)malloc(0x10000);
-	ws_staticRam=(uint8*)malloc(0x10000);
-	externalEeprom=(uint8*)malloc(131072);//ws_rom_eepromSize(ws_rom,romSize));
-#endif
-	sramAddressMask=ws_rom_sramSize(ws_rom,romSize)-1;
-	externalEepromAddressMask=ws_rom_eepromSize(ws_rom,romSize)-1;
-	romAddressMask=romSize-1;
 
-	if (ws_romHeader->minimumSupportSystem==WS_SYSTEM_COLOR)
-		ws_gpu_operatingInColor=1;
+////////////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+//
+//
+//
+//
+//
+////////////////////////////////////////////////////////////////////////////////
+void ws_memory_init(uint8 *rom, uint32 wsRomSize) {
+    ws_romHeaderStruct *ws_romHeader;
+
+    ws_rom = rom;
+    romSize = wsRomSize;
+    ws_romHeader = ws_rom_getHeader(ws_rom, romSize);
+    ws_rom_checksum = ws_romHeader->checksum;
+
+    sramAddressMask = ws_rom_sramSize(ws_rom, romSize) - 1;
+    externalEepromAddressMask = ws_rom_eepromSize(ws_rom, romSize) - 1;
+    romAddressMask = romSize - 1;
+
+    if (ws_romHeader->minimumSupportSystem == WS_SYSTEM_COLOR)
+        ws_gpu_operatingInColor = 1;
 
 }
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 ////////////////////////////////////////////////////////////////////////////////
@@ -177,11 +145,11 @@ void ws_memory_init(uint8 *rom, uint32 wsRomSize)
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-void ws_memory_reset(void)
-{
-	memset(internalRam,0,0x10000);
+void ws_memory_reset(void) {
+    memset(internalRam, 0, 0x10000);
 //	memset(ws_staticRam,0,0x10000);
 }
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 ////////////////////////////////////////////////////////////////////////////////
@@ -193,13 +161,12 @@ void ws_memory_reset(void)
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-void ws_memory_done(void)
-{
+void ws_memory_done(void) {
 #if 0
-	free(ws_rom);
-	free(ws_staticRam);
-	free(internalRam);
-	free(externalEeprom);
+    free(ws_rom);
+    free(ws_staticRam);
+    free(internalRam);
+    free(externalEeprom);
 #endif
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -213,9 +180,8 @@ void ws_memory_done(void)
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-uint8	*memory_getRom(void)
-{
-	return(ws_rom);
+uint8 *memory_getRom(void) {
+    return (ws_rom);
 }
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -228,9 +194,8 @@ uint8	*memory_getRom(void)
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-uint32	memory_getRomSize(void)
-{
-	return(romSize);
+uint32 memory_getRomSize(void) {
+    return (romSize);
 }
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -243,8 +208,7 @@ uint32	memory_getRomSize(void)
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-uint16	memory_getRomCrc(void)
-{
-	return(ws_rom_checksum);
+uint16 memory_getRomCrc(void) {
+    return (ws_rom_checksum);
 }
 

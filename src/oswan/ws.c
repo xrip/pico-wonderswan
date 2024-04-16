@@ -14,15 +14,9 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <malloc.h>
 #include <io.h>
-#if 0
-#include <fcntl.h>
-#include <conio.h>
-#endif
 #include "./nec/nec.h"
 #include "./nec/necintrf.h"
 #include "memory.h"
@@ -46,7 +40,7 @@
 
 uint32	ws_cycles;
 uint32	ws_skip;
-uint32	ws_cyclesByLine=677;
+uint32	ws_cyclesByLine=256;
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -118,7 +112,8 @@ void ws_patchRom(void)
 int ws_init(uint8  *rom, size_t romSize)
 {
 	ws_memory_init(rom, romSize);
-	ws_patchRom();
+// TODO: Move patches to filebrowser_read
+    //	ws_patchRom();
 	ws_io_init();
 //	ws_audio_init();
 	ws_gpu_init();
@@ -749,10 +744,10 @@ ERROR :
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-int ws_rotated(void)
+__always_inline int ws_rotated(void)
 {
 	uint8	*rom=memory_getRom();
 	uint32	romSize=memory_getRomSize();
-	
+
 	return(rom[romSize-4]&1);
 }
