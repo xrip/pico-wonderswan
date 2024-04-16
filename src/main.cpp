@@ -34,7 +34,8 @@ bool reboot = false;
 semaphore vga_start_semaphore;
 
 alignas(4) uint8_t SCREEN[144][224];
-alignas(4) int audio_buffer[AUDIO_BUFFER_LENGTH];
+//alignas(4) int audio_buffer[AUDIO_BUFFER_LENGTH];
+extern uint32_t	ws_shades[16];
 
 struct input_bits_t {
     bool a: true;
@@ -89,8 +90,7 @@ static bool isInReport(hid_keyboard_report_t const* report, const unsigned char 
     return false;
 }
 
-void
-__not_in_flash_func(process_kbd_report)(hid_keyboard_report_t const* report, hid_keyboard_report_t const* prev_report) {
+void process_kbd_report(hid_keyboard_report_t const* report, hid_keyboard_report_t const* prev_report) {
     /* printf("HID key report modifiers %2.2X report ", report->modifier);
     for (unsigned char i: report->keycode)
         printf("%2.2X", i);
@@ -134,7 +134,7 @@ typedef struct __attribute__((__packed__)) {
     char filename[79];
 } file_item_t;
 
-constexpr int max_files = 100;
+constexpr int max_files = 320;
 file_item_t *fileItems = (file_item_t *) (&SCREEN[0][0] + TEXTMODE_COLS * TEXTMODE_ROWS * 2);
 
 int compareFileItems(const void *a, const void *b) {
@@ -182,7 +182,7 @@ bool filebrowser_loadfile(const char pathname[256]) {
     FILINFO fileinfo;
     f_stat(pathname, &fileinfo);
     rom_size = fileinfo.fsize;
-    if (16384 - 64 << 10 < fileinfo.fsize) {
+    if ((16384 - 64) << 10 < fileinfo.fsize) {
         draw_text("ERROR: ROM too large! Canceled!!", window_x + 1, window_y + 2, 13, 1);
         sleep_ms(5000);
         return false;
@@ -517,7 +517,7 @@ bool toggle_color() {
     return true;
 }
 #endif
-
+int palette_index = 0;
 const MenuItem menu_items[] = {
         { "Swap AB <> BA: %s", ARRAY, &swap_ab, nullptr, 1, { "NO ", "YES" }},
         {},
@@ -526,6 +526,13 @@ const MenuItem menu_items[] = {
 //        {},
 //        { "Save state: %i", INT, &save_slot, &save, 5 },
 //        { "Load state: %i", INT, &save_slot, &load, 5 },
+        { "Palette: %s", ARRAY, &palette_index, nullptr, 2,
+          {
+                  "default",
+                  "amber  ",
+                  "green  "
+          }
+        },
         {},
 #if SOFTTV
         { "TV system %s", ARRAY, &tv_out_mode.tv_system, nullptr, 1, { "PAL ", "NTSC" } },
@@ -634,7 +641,14 @@ void menu() {
 
         sleep_ms(125);
     }
+
+    ws_set_colour_scheme(palette_index);
+    for (int i = 0; i < 16; ++i) {
+        graphics_set_palette(i, ws_shades[i]);
+    }
+
     graphics_set_mode(GRAPHICSMODE_DEFAULT);
+
 }
 
 /* Renderer loop on Pico's second core */
@@ -657,7 +671,7 @@ void __time_critical_func(render_core)() {
     graphics_set_textbuffer(buffer);
     graphics_set_bgcolor(0x000000);
 
-    graphics_set_offset(0,0);
+    graphics_set_offset(48,48);
 
     graphics_set_flashmode(true, true);
     sem_acquire_blocking(&vga_start_semaphore);
@@ -692,7 +706,7 @@ void __time_critical_func(render_core)() {
 int frame, frame_cnt = 0;
 int frame_timer_start = 0;
 bool PSRAM_AVAILABLE = true;
-extern uint32_t	ws_shades[16];
+
 int main() {
     overclock();
 
@@ -757,7 +771,9 @@ int main() {
             if (1) {
 
                 if (++frame_cnt == 6) {
-                    while (time_us_64() - frame_timer_start < 16666 * 6);  // 60 Hz
+                    while (time_us_64() - frame_timer_start < 16666 * 6) {
+                        //busy_wait_at_least_cycles(10);
+                    }  // 60 Hz
                     frame_timer_start = time_us_64();
                     frame_cnt = 0;
                 }

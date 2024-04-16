@@ -10,4 +10,4 @@
 #define TEXTMODE_COLS 80
 #define TEXTMODE_ROWS 30
 
-#define RGB888(r, g, b) (((int)r<<16) | ((int)g << 8 ) | (int)b )
+#define RGB888(r, g, b) (((r)<<16) | ((g) << 8 ) | (b) )
