@@ -17,8 +17,8 @@ option(SOFTTV "Enable TV soft composite output" OFF)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 #add_compile_options(-flto)
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -funroll-loops  -ffast-math -feliminate-unused-debug-types -ffunction-sections -fdata-sections -O2")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -funroll-loops  -ffast-math -feliminate-unused-debug-types -ffunction-sections -fdata-sections -O2")
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -funroll-loops  -ffast-math -feliminate-unused-debug-types -ffunction-sections -fdata-sections -Ofast")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -funroll-loops  -fno-rtti   -ffast-math -feliminate-unused-debug-types -ffunction-sections -fdata-sections -Ofast")
 
 set(OUTPUT_DIR "${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE}")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
@@ -130,7 +130,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         hardware_flash
 
 #		tinyusb_board
-#		tinyusb_device
+		tinyusb_device
 )
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 		PICO_FLASH_SIZE_BYTES=16777216

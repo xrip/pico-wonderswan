@@ -367,6 +367,7 @@ void ws_gpu_clearCache(void) {
     memset(wsc_modified_tile, 0x01, 1024);
     //memset(ws_modified_tile, 0x01, 512);
 }
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 ////////////////////////////////////////////////////////////////////////////////
@@ -378,8 +379,8 @@ void ws_gpu_clearCache(void) {
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-uint8 *ws_tileCache_getTileRow(uint32 tileIndex, uint32 line,
-                               uint32 vFlip, uint32 hFlip, uint32 bank) {
+static __always_inline uint8 *ws_tileCache_getTileRow(uint32 tileIndex, uint32 line,
+                                                      uint32 vFlip, uint32 hFlip, uint32 bank) {
     if (ws_gpu_operatingInColor) {
         if (bank)
             tileIndex += 512;
@@ -434,6 +435,7 @@ uint8 *ws_tileCache_getTileRow(uint32 tileIndex, uint32 line,
                 uint32 *tileInRamPtr = (uint32 *) &internalRam[0x4000 + (tileIndex << 5)];
                 uint32 tileLine;
 
+#pragma GCC unroll 8
                 for (int line = 0; line < 8; line++) {
                     tileLine = *tileInRamPtr++;
 
@@ -487,6 +489,7 @@ uint8 *ws_tileCache_getTileRow(uint32 tileIndex, uint32 line,
                 uint32 *tileInRamPtr = (uint32 *) &internalRam[0x4000 + (tileIndex << 5)];
                 uint32 tileLine;
 
+#pragma GCC unroll 8
                 for (int line = 0; line < 8; line++) {
                     tileLine = *tileInRamPtr++;
 
@@ -539,6 +542,7 @@ uint8 *ws_tileCache_getTileRow(uint32 tileIndex, uint32 line,
             uint32 *tileInRamPtr = (uint32 *) &internalRam[0x2000 + (tileIndex << 4)];
             uint32 tileLine;
 
+#pragma GCC unroll 4
             for (int line = 0; line < 4; line++) {
                 tileLine = *tileInRamPtr++;
 
@@ -590,7 +594,7 @@ uint8 *ws_tileCache_getTileRow(uint32 tileIndex, uint32 line,
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-static void ws_drawClippedSpriteLine(uint8 *framebuffer, uint16 scanline,
+static __always_inline void ws_drawClippedSpriteLine(uint8 *framebuffer, uint16 scanline,
                                      uint32 x, uint32 y, uint32 tileIndex, uint32 paletteIndex,
                                      uint32 vFlip, uint32 hFlip,
                                      uint32 clip_x0, uint32 clip_y0, uint32 clip_x1, uint32 clip_y1) {

@@ -1,4 +1,4 @@
-uint8_t	cpu_readport(uint8_t);
+extern uint8_t	cpu_readport(uint8_t);
 void cpu_writeport(uint32_t,uint8_t);
 #define cpu_readop cpu_readmem20	
 #define cpu_readop_arg cpu_readmem20	
