@@ -765,7 +765,7 @@ int main() {
                 menu();
             }
 
-            while(!ws_executeLine((uint8_t *)SCREEN, 1));
+            while(!ws_executeLine((uint8_t *)SCREEN, frame % 2 == 0 ? 1 : 0 ));
 
             frame++;
             if (1) {

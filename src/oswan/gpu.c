@@ -85,10 +85,10 @@ extern uint8 internalRam[0x10000];
 uint8 ws_gpu_operatingInColor;
 uint8 ws_videoMode;
 uint8 ws_gpu_scanline = 0;
-int16 ws_palette[16 * 4];
-int8 ws_paletteColors[8];
-int16 wsc_palette[16 * 16];
-uint32 ws_shades[16];
+__aligned(4) int16 ws_palette[16 * 4];
+__aligned(4) int8 ws_paletteColors[8];
+__aligned(4) int16 wsc_palette[16 * 16];
+__aligned(4) uint32 ws_shades[16];
 int ws_gpu_forceColorSystemBool = 0;
 int ws_gpu_forceMonoSystemBool = 0;
 

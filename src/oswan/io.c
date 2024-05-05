@@ -23,7 +23,7 @@
 extern uint32 externalEepromAddressMask;
 extern uint32 romAddressMask;
 
-uint8 ws_ioRam[0x100];
+__aligned(4) uint8 ws_ioRam[0x100];
 
 uint8 ws_key_start;
 uint8 ws_key_left;

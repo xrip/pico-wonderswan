@@ -31,7 +31,7 @@
 
 
 static uint8 *ws_rom;
-uint8 internalRam[0x10000];
+__aligned(4) uint8 internalRam[0x10000];
 
 
 uint16 ws_rom_checksum;
